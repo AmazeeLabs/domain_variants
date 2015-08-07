@@ -493,6 +493,10 @@ function domain_variants_load($variant_id, $reset = FALSE) {
         $variants[$variant_id]->prefix = implode('/', $words);
         $variants[$variant_id]->base_url = $base;
       }
+
+      // Set the is_new flag to FALSE to avoid notices.
+      $variants[$variant_id]->is_new = FALSE;
+
       // This function is called from the domain_variants_domain_bootstrap_lookup()
       // and if we will call any module_invoke_all() here, then the registry will
       // be saved wrong later during the request. Unless, we put the module_invoke
@@ -510,6 +514,9 @@ function domain_variants_load($variant_id, $reset = FALSE) {
 
 /**
  * Saves a domain variant.
+ *
+ * @param object $domain_variant
+ *   Data object (stdClass) containing all properties to be saved.
  */
 function domain_variants_save($domain_variant) {
   $update = array();
