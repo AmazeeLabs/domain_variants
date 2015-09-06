@@ -5,7 +5,7 @@
  */
 
 function domain_variants_admin($domain, $variant = NULL) {
-  $variants = domain_variants_loockup($domain['domain_id']);
+  $variants = domain_variants_lookup($domain['domain_id']);
   $output = '<div>' . t('Domain variants for %domain (%domain_url). !domain_list', array('%domain' => $domain['sitename'], '%domain_url' => $domain['subdomain'], '!domain_list' => l(t('Back to the domains list.'), 'admin/structure/domain/variants'))) . '</div>';
   return array(
     'domain_info' => array('#markup' => $output),
