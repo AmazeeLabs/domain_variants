@@ -460,8 +460,11 @@ function domain_variants_switcher_form($form, &$form_state, $domains = array()) 
   global $_domain;
   if (!empty($_domain['variants'])) {
     global $_domain_variant;
-    if (!empty($form['domain_variant_swicher']['#options']['v_' . $_domain_variant->variant_id])) {
-      $form['domain_variant_swicher']['#default_value'] = 'v_' . $_domain_variant->variant_id;
+
+    if (!empty($_domain_variant)) {
+      if (!empty($form['domain_variant_swicher']['#options']['v_' . $_domain_variant->variant_id])) {
+        $form['domain_variant_swicher']['#default_value'] = 'v_' . $_domain_variant->variant_id;
+      }
     }
   }
   else {

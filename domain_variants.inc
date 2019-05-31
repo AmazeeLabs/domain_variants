@@ -56,6 +56,7 @@ function _domain_variants_locale_languages_from_browser() {
         $browser_langcodes[$generic_tag] = $qvalue;
       }
     }
+
     $lang_codes = array_keys($browser_langcodes);
     return $lang_codes;
   }

@@ -75,6 +75,7 @@ function dv_georedirect_search_variants() {
         ->fetchField();
     }
   }
+
   if (empty($country_code)) {
     module_load_include('inc', 'domain_variants');
     $country_code = _domain_variants_get_country_code();
@@ -82,6 +83,7 @@ function dv_georedirect_search_variants() {
 
   // Second, get the language.
   global $language;
+
   // If we have the language enabled, then use it, otherwise get it from the
   // browser.
   if (!empty($language)) {
@@ -91,7 +93,9 @@ function dv_georedirect_search_variants() {
     // Our function to get the language from the browser is a bit different, it
     // will not check any enabled languages.
     module_load_include('inc', 'domain_variants');
-    $langcode = reset(_domain_variants_locale_languages_from_browser());
+    $browser_languages = _domain_variants_locale_languages_from_browser();
+    // These languages are already sorted by quality, so take the first.
+    $langcode = reset($browser_languages);
   }
   // The language must always be defined, so if empty, just initialize it with
   // default one.
@@ -140,18 +144,25 @@ function dv_georedirect_search_variants() {
   // languages. But always leave at least one variant.
   module_load_include('inc', 'domain_variants');
   $langcodes = _domain_variants_locale_languages_from_browser();
+
+  $variants_score = array();
   foreach ($result as $key => $value) {
-    if (count($result) > 1) {
-      $variant = domain_variants_load($value->variant_id);
-      if (!empty($variant->languages)) {
-        if (array_intersect($langcodes, array_keys($variant->languages))) {
-          return array($key => $value);
-        }
-        else {
-          unset($result[$key]);
-        }
+    $variant = domain_variants_load($value->variant_id);
+    if (!empty($variant->languages)) {
+      if ($intersection = array_intersect($langcodes, array_keys($variant->languages))) {
+        $variants_score[count($intersection)] = array($key => $value);
+      }
+      else {
+        unset($result[$key]);
       }
     }
+  }
+
+  // If multiple variants pick the most relevant.
+  if (!empty($variants_score)) {
+    // Sort by score.
+    krsort($variants_score);
+    return reset($variants_score);
   }
 
   return $result;
@@ -284,17 +295,42 @@ function _dv_georedirect_modify_redirect(&$path, &$options, &$http_response_code
   foreach ($variants as $key => $value) {
     $variants[$key] = domain_variants_load($value->variant_id);
   }
+
   if (!empty($variants)) {
-    $variant = reset($variants);
-    $options['domain_variant'] = $variant;
+    module_load_include('inc', 'domain_variants');
+
     // Check also if we need change the language.
     $language = isset($options['language']) ? $options['language'] : $GLOBALS['language'];
-    module_load_include('inc', 'domain_variants');
-    if ($langcode = _domain_variant_check_language($variant->variant_id, $language->language)) {
-      $languages = language_list();
-      $options['language'] = $languages[$langcode];
+    $languages = language_list();
+    $country_code = _domain_variants_get_country_code();
+
+    $chosen_variant = FALSE;
+    $chosen_language = FALSE;
+
+    // Go through variants and pick the best one.
+    foreach ($variants as $variant) {
+      // If we have a country code, make sure the variant is suitable for that country.
+      if (!is_null($country_code)) {
+        if (in_array($country_code, array_keys($variant->countries))) {
+          if ($langcode = _domain_variant_check_language($variant->variant_id, $language->language)) {
+            $chosen_variant = $variant;
+            $chosen_language = $languages[$langcode];
+          }
+        }
+      }
+      else {
+        if ($langcode = _domain_variant_check_language($variant->variant_id, $language->language)) {
+          $chosen_variant = $variant;
+          $chosen_language = $languages[$langcode];
+        }
+      }
     }
-    return TRUE;
+
+    if ($chosen_variant && $chosen_language) {
+      $options['domain_variant'] = $chosen_variant;
+      $options['language'] = $chosen_language;
+      return TRUE;
+    }
   }
   return FALSE;
 }
